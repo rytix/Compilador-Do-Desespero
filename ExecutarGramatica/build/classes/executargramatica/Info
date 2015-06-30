@@ -1,0 +1,3 @@
+BUGS:
+VDDSemantico: chamada de função não verifica se a variavel passada é do TIPO correto.
+VDDSemantico: chamada de função não deixa passar um vetor, só a posição dele.

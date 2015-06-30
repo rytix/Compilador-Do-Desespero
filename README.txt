@@ -1,0 +1,1 @@
+VETORES, remover a tentativa de otimizar o código
