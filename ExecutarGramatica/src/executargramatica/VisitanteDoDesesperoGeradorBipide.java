@@ -24,6 +24,7 @@ public class VisitanteDoDesesperoGeradorBipide extends VisitanteDoDesespero {
     private final List<AssemblyName> anlist;
     private int maiorNumTemporariosNecessarios = 0;
     private int numTemporariosNecessarios = 0;
+    private int numRotuloAtual = 0;
 
     public VisitanteDoDesesperoGeradorBipide(List<Identificador> tabelaSimbolos) {
         super(tabelaSimbolos);
@@ -55,6 +56,12 @@ public class VisitanteDoDesesperoGeradorBipide extends VisitanteDoDesespero {
     private int releaseTheTemp() {
         numTemporariosNecessarios--;
         return numTemporariosNecessarios;
+    }
+
+    private String getOneRot() {
+        numRotuloAtual++;
+        String rot = "rot" + numRotuloAtual;
+        return rot;
     }
 
     private void geradorData() {
@@ -90,50 +97,71 @@ public class VisitanteDoDesesperoGeradorBipide extends VisitanteDoDesespero {
         int tempNum;
         DesesperoParser.Op_relContext rel = null;
         for (int i = 1; i < ctx.val_final().size(); i++) {
-            if(ctx.operations(i - 1).op_rel() != null){
+            if (ctx.operations(i - 1).op_rel() != null) {
                 tempNum = getOneTemp();
                 comando("STO", "temp" + tempNum);
-                comando("LDI", "0");
                 rel = ctx.operations(i - 1).op_rel();
+                comando("LDI", ctx.val_final(i).getText());
             }
             resolveValFinalEOperando(ctx.operations(i - 1), ctx.val_final(i));
         }
-        if(rel != null){
+        if (rel != null) {
             tempNum = getOneTemp();
             comando("STO", "temp" + tempNum);
-            comando("LD", "temp"+(tempNum-1));
-            comando("SUB", "temp"+tempNum);
+            comando("LD", "temp" + (tempNum - 1));
+            comando("SUB", "temp" + tempNum);
             releaseTheTemp();
             releaseTheTemp();
-            
+
         }
         return null; //To change body of generated methods, choose Tools | Templates.
     }
-    private void resolveSalto(DesesperoParser.Op_relContext rel,int tempNum, boolean anti_form){
-        if(rel.DIFERENTE() != null){
-            if(anti_form){
-                comando(null, null);
-            }else{
-                
+
+    private void resolveSalto(DesesperoParser.Op_relContext rel, boolean anti_form, String rot) {
+        if (rel.DIFERENTE() != null) {
+            if (anti_form) {
+                comando("BEQ", rot);
+            } else {
+                comando("BNE", rot);
             }
         }
-        if(rel.IDENTICO() != null){
-            
+        if (rel.IDENTICO() != null) {
+            if (anti_form) {
+                comando("BNE", rot);
+            } else {
+                comando("BEQ", rot);
+            }
         }
-        if(rel.MAIOROUIGUAL() != null){
-            
+        if (rel.MAIOROUIGUAL() != null) {
+            if (anti_form) {
+                comando("BLT", rot);
+            } else {
+                comando("BGE", rot);
+            }
         }
-        if(rel.MAIORQUE() != null){
-            
+        if (rel.MAIORQUE() != null) {
+            if (anti_form) {
+                comando("BLE", rot);
+            } else {
+                comando("BGT", rot);
+            }
         }
-        if(rel.MENOROUIGUAL() != null){
-            
+        if (rel.MENOROUIGUAL() != null) {
+            if (anti_form) {
+                comando("BGT", rot);
+            } else {
+                comando("BLE", rot);
+            }
         }
-        if(rel.MENORQUE() != null){
-            
+        if (rel.MENORQUE() != null) {
+            if (anti_form) {
+                comando("BGE", rot);
+            } else {
+                comando("BLT", rot);
+            }
         }
     }
-    
+
     private void primeiraOperacao(DesesperoParser.ExpressaoContext ctx) {
         DesesperoParser.Val_finalContext valctx = ctx.val_final(0);
         //Carregar valor inteiro imediato
@@ -183,10 +211,7 @@ public class VisitanteDoDesesperoGeradorBipide extends VisitanteDoDesespero {
             }
         }
     }
-    private void resolveOpRelacional(){
-        
-    }
-    
+
     private void resolveOpAritmeticaMaisOuNegacaoMenos(DesesperoParser.Val_finalContext valctx, boolean operacaoMais) {
         //ADD ou SUB valor inteiro imediato
         if (valctx.CONSTINTEIRO() != null) {
@@ -365,7 +390,31 @@ public class VisitanteDoDesesperoGeradorBipide extends VisitanteDoDesespero {
 
     @Override
     public Object visitIfdes(DesesperoParser.IfdesContext ctx) {
-        return super.visitIfdes(ctx); //To change body of generated methods, choose Tools | Templates.
+        String rot = getOneRot();
+        String rot2 = null;
+        visitExpressao(ctx.expressao());
+        List<DesesperoParser.OperationsContext> operacoes = ctx.expressao().operations();
+        for (DesesperoParser.OperationsContext operacao : operacoes) {
+            if (operacao.op_rel() != null) {
+                resolveSalto(operacao.op_rel(), true, rot);
+            }
+        }
+        visitBloco(ctx.bloco());
+        if (ctx.ifdeselse() != null || ctx.ifdeselseif() != null) {
+            rot2 = getOneRot();
+            comando("JMP", rot2);
+        }
+        comando(rot + ":", "");
+
+        if (ctx.ifdeselse() != null) {
+            visitIfdeselse(ctx.ifdeselse());
+            comando(rot2 + ":", "");
+        }
+        if (ctx.ifdeselseif() != null) {
+            visitIfdeselseif(ctx.ifdeselseif());
+            comando(rot2 + ":", "");
+        }
+        return null;
     }
 
     @Override
@@ -414,12 +463,53 @@ public class VisitanteDoDesesperoGeradorBipide extends VisitanteDoDesespero {
 
     @Override
     public Object visitFordes(DesesperoParser.FordesContext ctx) {
-        return super.visitFordes(ctx); //To change body of generated methods, choose Tools | Templates.
+        visitDeclaracoes(ctx.declaracoes());
+        
+        String rotRest = getOneRot();
+        String rotQuit = getOneRot();
+        comando(rotRest+":", "");
+        
+        visitExpressao(ctx.expressao());
+        
+        List<DesesperoParser.OperationsContext> operacoes = ctx.expressao().operations();
+        for (DesesperoParser.OperationsContext operacao : operacoes) {
+            if (operacao.op_rel() != null) {
+                resolveSalto(operacao.op_rel(), true, rotQuit);
+            }
+        }
+        
+        visitBloco(ctx.bloco());
+
+        List<DesesperoParser.AtribuicoesContext> atris = ctx.atribuicoes();
+        for (DesesperoParser.AtribuicoesContext atri : atris) {
+            visitAtribuicoes(atri);
+        }
+        
+        comando("JMP", rotRest);
+        comando(rotQuit+":", "");
+        return null;
     }
 
     @Override
     public Object visitWhiledes(DesesperoParser.WhiledesContext ctx) {
-        return super.visitWhiledes(ctx); //To change body of generated methods, choose Tools | Templates.
+        String rotRest = getOneRot();
+        String rotQuit = getOneRot();
+        comando(rotRest+":", "");
+        
+        visitExpressao(ctx.expressao());
+        
+        List<DesesperoParser.OperationsContext> operacoes = ctx.expressao().operations();
+        for (DesesperoParser.OperationsContext operacao : operacoes) {
+            if (operacao.op_rel() != null) {
+                resolveSalto(operacao.op_rel(), true, rotQuit);
+            }
+        }
+        
+        visitBloco(ctx.bloco());
+        
+        comando("JMP", rotRest);
+        comando(rotQuit+":", "");
+        return null;
     }
 
     private AssemblyName findAN(String name) {

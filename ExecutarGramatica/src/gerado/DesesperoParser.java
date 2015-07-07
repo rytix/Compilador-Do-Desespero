@@ -50,7 +50,7 @@ public class DesesperoParser extends Parser {
 
 	private static final String[] _LITERAL_NAMES = {
 		null, "'CORRAM PARA AS COLINAS!!!'", "'VAMOS TODOS MORRER'", "'POR AQUI!!!'", 
-		"' NAO, DROGA POR AQUI!!!'", "'CADE A SAIDA!!!'", "'NOS PERDEMOS DE NOVO...'", 
+		"'NAO, DROGA POR AQUI!!!'", "'CADE A SAIDA!!!'", "'NOS PERDEMOS DE NOVO...'", 
 		"'CORRAM PARA AS COLINAS... DE NOVO'", "'TA TODO MUNDO INTEIRO?!?'", "'AONDE FICA A CADEIA?!?'", 
 		"'NAO PODE SER REAL...'", "'ACHO QUE FOI UM FANTASMA!!!'", "'OU � VOCE OU EU !'", 
 		"'ESTOU TROCANDO NUMEROS POR LETRAS'", "'ESTOU ME SENTINDO TAO VAZIO...'", 
